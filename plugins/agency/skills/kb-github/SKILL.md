@@ -46,6 +46,10 @@ The intended command semantics are:
   Only for bootstrapping an **empty** collection from `.agency-kb/outline.json`.
 - `sync`
   The normal ongoing command. Export current docs from Agency, generate updates, and only regenerate changed docs unless `--all` is specified.
+- `review`
+  Discovery only. Export current docs, scan the repo for uncovered source files, and write `review/gaps.json`. The skill then analyzes the gaps and proposes new articles.
+- `review --publish`
+  Create stub articles from `.json` proposals in `review/`. Stubs are title + topic bullets. Run `sync --all --publish` afterward to generate full content.
 
 Never suggest reinitializing or replacing a non-empty collection automatically.
 
@@ -58,6 +62,8 @@ Never suggest reinitializing or replacing a non-empty collection automatically.
 | `agency-kb preview` | Show which source files match each article's globs |
 | `agency-kb sync` | Export existing docs → analyze → generate to local files only (supports `--path-prefix`) |
 | `agency-kb sync --publish` | Same as sync, but also uploads generated articles to the API |
+| `agency-kb review` | Export docs to download/, scan for uncovered files, write review/gaps.json |
+| `agency-kb review --publish` | Create stub articles from .json proposals in review/, then run sync to generate content |
 
 ### Installing and running the CLI
 
@@ -251,6 +257,69 @@ When the user is satisfied:
 - `.agency-kb/download/<path>.json`
 - `.agency-kb/upload/<path>.md`
 - `.agency-kb/upload/<path>.json`
+
+## Review workflow (adding new articles to an existing KB)
+
+Use this workflow when the user wants to find coverage gaps and add new articles to an existing collection.
+
+### Step 1: Run the gap scan
+
+```bash
+sh ${CLAUDE_SKILL_DIR}/scripts/run.sh review
+```
+
+This exports current docs to `.agency-kb/download/` and writes `.agency-kb/review/gaps.json` listing uncovered source files grouped by directory.
+
+### Step 2: Analyze the gaps
+
+Read `.agency-kb/review/gaps.json` and the existing articles in `.agency-kb/download/`. Explore the uncovered source files to understand what they do. Not every uncovered file needs an article — focus on user-facing features and workflows.
+
+**Present findings to the user:**
+- Which uncovered areas represent real documentation gaps
+- Which are internal/infrastructure and can be ignored
+- Proposed new articles with title, path, globs, and topics
+
+**Ask the user** which proposals to proceed with.
+
+### Step 3: Write proposals
+
+For each approved proposal, write a `.json` file to `.agency-kb/review/`:
+
+```json
+// .agency-kb/review/category/feature-name.json
+{
+  "title": "Feature Name",
+  "path": "category/feature-name",
+  "topics": ["Topic 1", "Topic 2", "Topic 3"],
+  "globs": ["src/features/feature/**/*.ts"],
+  "source_id": "github:owner/repo:main",
+  "metadata": {
+    "source_type": "github",
+    "owner": "owner",
+    "repo": "repo",
+    "branch": "main",
+    "globs": ["src/features/feature/**/*.ts"]
+  }
+}
+```
+
+Get the `source_id`, `owner`, `repo`, and `branch` from an existing article's metadata in `.agency-kb/download/`.
+
+### Step 4: Publish stubs
+
+```bash
+sh ${CLAUDE_SKILL_DIR}/scripts/run.sh review --publish
+```
+
+This creates stub articles (title + topic bullets) in the collection for each proposal.
+
+### Step 5: Generate full content
+
+```bash
+sh ${CLAUDE_SKILL_DIR}/scripts/run.sh sync --all --publish
+```
+
+This regenerates all articles including the new stubs, replacing them with full content.
 
 ## Editing the outline file
 

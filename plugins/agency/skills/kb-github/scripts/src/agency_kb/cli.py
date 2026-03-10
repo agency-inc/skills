@@ -148,8 +148,7 @@ async def init(
         documents=init_documents,
     )
     rich.print(
-        f"[green]Materialized {len(init_documents)} initial document(s)"
-        f" to {upload_dir}.[/green]"
+        f"[green]Materialized {len(init_documents)} initial document(s) to {upload_dir}.[/green]"
     )
 
     rich.print("Init summary:")
@@ -241,9 +240,7 @@ def preview(
         )
         raise typer.Exit(1)
 
-    parsed_outline = InitOutline.model_validate_json(
-        outline_file.read_text(encoding="utf-8")
-    )
+    parsed_outline = InitOutline.model_validate_json(outline_file.read_text(encoding="utf-8"))
 
     exported_docs = [
         ExportedOutlineDocument(
@@ -462,6 +459,153 @@ async def sync(
             "\n[yellow]Local only.[/yellow] Review results in .agency-kb/upload/, "
             "then re-run with [cyan]--publish[/cyan] to upload."
         )
+
+
+@app.command()
+async def review(
+    repo_root: Annotated[Path, typer.Option(help="Repository root")] = Path("."),
+    api_key: Annotated[str, typer.Option(help="Agency API key")] = "",
+    publish: Annotated[
+        bool,
+        typer.Option(
+            "--publish/--no-publish",
+            help="Create stub articles from .agency-kb/review/ in the KB.",
+        ),
+    ] = False,
+) -> None:
+    """Discover KB coverage gaps or publish new article stubs.
+
+    Without --publish: exports current docs to download/, scans the repo for
+    uncovered source files, and writes review/gaps.json. The Claude Code skill
+    reads the gaps, suggests new articles, and writes .json proposals to review/.
+
+    With --publish: creates stub articles (title + topics) from each .json in
+    .agency-kb/review/. Run sync --publish afterward to generate full content.
+    """
+    from agency_kb.api_client import KnowledgeBaseApiClient
+    from agency_kb.config import (
+        config_dir,
+        find_repo_root,
+        load_config,
+        resolve_api_key,
+    )
+    from agency_kb.export import run_export
+    from agency_kb.review import find_uncovered_files, group_by_directory, write_review_report
+    from agency_kb.schemas import GitHubSourceMetadata
+
+    resolved_root = repo_root.resolve() if repo_root != Path(".") else find_repo_root()
+    cfg = load_config(resolved_root)
+    artifacts_root = config_dir(resolved_root)
+    download_dir = artifacts_root / "download"
+    review_dir = artifacts_root / "review"
+
+    async with KnowledgeBaseApiClient(
+        base_url=cfg.api_base_url,
+        api_key=resolve_api_key(api_key or None),
+    ) as kb_api:
+        current_documents = await kb_api.list_documents(collection_id=cfg.collection_id)
+        if not current_documents:
+            rich.print(
+                f"[red]No documents found in collection {cfg.collection_id}. "
+                "Run the init flow first.[/red]"
+            )
+            raise typer.Exit(1)
+
+        # --- Publish mode: create stubs from review/ proposals ---
+        if publish:
+            doc_by_path = {d.path: d for d in current_documents}
+            json_files = sorted(review_dir.rglob("*.json")) if review_dir.exists() else []
+            json_files = [f for f in json_files if f.name != "gaps.json"]
+            if not json_files:
+                rich.print("[yellow]No proposals found in .agency-kb/review/.[/yellow]")
+                return
+
+            created = 0
+            for json_path in json_files:
+                meta = json.loads(json_path.read_text(encoding="utf-8"))
+
+                article_path = meta.get("path", "")
+                if not article_path:
+                    rel = json_path.relative_to(review_dir).with_suffix("")
+                    article_path = rel.as_posix()
+
+                if article_path in doc_by_path:
+                    rich.print(f"  [yellow]SKIP[/yellow] {article_path} (already exists)")
+                    continue
+
+                title = meta.get("title", "")
+                topics = meta.get("topics", [])
+                topics_md = "\n".join(f"- {t}" for t in topics)
+                stub_content = f"# {title}\n\n{topics_md}\n"
+
+                source_id = meta.get("source_id")
+                metadata_raw = meta.get("metadata", {})
+                metadata = GitHubSourceMetadata.model_validate(metadata_raw)
+                metadata.stub = True
+
+                new_doc = await kb_api.create_document(
+                    title=title,
+                    content=stub_content,
+                    path=article_path,
+                    collection_id=cfg.collection_id,
+                    source_id=source_id,
+                    metadata=metadata,
+                )
+                rich.print(f"  [green]+[/green] {new_doc.title} ({new_doc.path})")
+                created += 1
+
+            rich.print(f"\n[green]Created {created} stub article(s).[/green]")
+            if created > 0:
+                rich.print(
+                    "Run [cyan]agency-kb sync --all --publish[/cyan] to generate"
+                    " full content for all articles."
+                )
+            return
+
+        # --- Discovery mode: export and scan for gaps ---
+        rich.print("[cyan]Exporting current docs to download/...[/cyan]")
+        outline = await run_export(
+            kb_api=kb_api,
+            collection_id=cfg.collection_id,
+        )
+
+        if not outline.documents:
+            rich.print("[yellow]No documents found in the configured collection.[/yellow]")
+            return
+
+        current_docs_by_path = {doc.path: doc for doc in current_documents}
+        _write_download_artifacts(
+            download_dir=download_dir,
+            exported_documents=outline.documents,
+            current_documents_by_path=current_docs_by_path,
+        )
+        rich.print(f"[cyan]Saved {len(outline.documents)} doc(s) to {download_dir}.[/cyan]")
+
+    rich.print("[cyan]Scanning for uncovered files...[/cyan]")
+    uncovered = find_uncovered_files(
+        repo_root=resolved_root,
+        outline=outline,
+    )
+
+    if uncovered:
+        write_review_report(
+            output_path=review_dir / "gaps.json",
+            uncovered_files=uncovered,
+            existing_article_count=len(outline.documents),
+            collection_id=cfg.collection_id,
+        )
+
+        grouped = group_by_directory(uncovered)
+        rich.print(f"\n[yellow]{len(uncovered)} uncovered source file(s):[/yellow]")
+        for directory, files in grouped.items():
+            rich.print(f"  [cyan]{directory}/[/cyan] ({len(files)} files)")
+            for f in files[:5]:
+                rich.print(f"    {f}")
+            if len(files) > 5:
+                rich.print(f"    ... and {len(files) - 5} more")
+        rich.print(f"\n[green]Gap report written to {review_dir / 'gaps.json'}[/green]")
+    else:
+        rich.print("[green]All source files are covered by existing articles.[/green]")
 
 
 def _write_download_artifacts(
