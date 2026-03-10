@@ -1,4 +1,4 @@
-SCRIPTS_DIR := plugins/agency-knows/skills/agency-knows/scripts
+SCRIPTS_DIR := plugins/agency-knows/skills/kb-github/scripts
 
 .PHONY: lint format typecheck install test
 

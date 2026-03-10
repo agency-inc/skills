@@ -10,7 +10,7 @@ from pydantic import ValidationError
 
 from agency_knows.schemas import KbGenConfig
 
-CONFIG_DIR = ".agency-knows"
+CONFIG_DIR = ".agency-kb"
 CONFIG_FILE = "config.yaml"
 OUTLINE_FILE = "outline.json"
 PROMPT_FILE = "PROMPT.md"

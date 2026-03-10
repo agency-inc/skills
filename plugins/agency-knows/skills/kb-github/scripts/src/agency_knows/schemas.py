@@ -53,7 +53,7 @@ class KnowledgeBaseDocument(BaseModel):
 
 
 # ---------------------------------------------------------------------------
-# Config file (.agency-knows/config.yaml)
+# Config file (.agency-kb/config.yaml)
 # ---------------------------------------------------------------------------
 
 

@@ -33,8 +33,8 @@ Treat the workflow as three separate responsibilities:
 
 The intended source of truth by phase is:
 
-- **Prompting context**: `.agency-knows/PROMPT.md`
-- **Before bootstrap**: `.agency-knows/outline.json`
+- **Prompting context**: `.agency-kb/PROMPT.md`
+- **Before bootstrap**: `.agency-kb/outline.json`
 - **After bootstrap**: the collection contents in Agency
 - **Steady state**: `sync` should be driven by the collection contents in Agency, not by the local outline
 
@@ -43,7 +43,7 @@ The intended command semantics are:
 - `init`
   Safe by default. Read existing config and outline first, validate them, inspect the target collection, and materialize what would be uploaded.
 - `init --publish`
-  Only for bootstrapping an **empty** collection from `.agency-knows/outline.json`.
+  Only for bootstrapping an **empty** collection from `.agency-kb/outline.json`.
 - `sync`
   The normal ongoing command. Export current docs from Agency, generate updates, and only regenerate changed docs unless `--all` is specified.
 
@@ -81,9 +81,9 @@ When the user is creating or updating the outline, guide them through a short, e
 ### 1. Inspect existing state first
 
 Before proposing anything new:
-- Read `.agency-knows/config.yaml` if it exists
-- Read `.agency-knows/PROMPT.md` if it exists
-- Read `.agency-knows/outline.json` if it exists
+- Read `.agency-kb/config.yaml` if it exists
+- Read `.agency-kb/PROMPT.md` if it exists
+- Read `.agency-kb/outline.json` if it exists
 - Summarize what already exists before suggesting changes
 
 If both files already exist:
@@ -122,7 +122,7 @@ First present:
 - paths
 - brief summaries
 
-Group by the first path segment. Highlight uncertain areas explicitly. Ask for approval or edits before writing `.agency-knows/outline.json`.
+Group by the first path segment. Highlight uncertain areas explicitly. Ask for approval or edits before writing `.agency-kb/outline.json`.
 
 ### 4. Use concrete guidance language
 
@@ -142,8 +142,8 @@ Avoid vague prompts like:
 
 ### Phase 1: Gather context
 
-1. Inspect `.agency-knows/config.yaml` and `.agency-knows/outline.json` first if they exist.
-2. Inspect `.agency-knows/PROMPT.md` if it exists and use it as project-specific guidance.
+1. Inspect `.agency-kb/config.yaml` and `.agency-kb/outline.json` first if they exist.
+2. Inspect `.agency-kb/PROMPT.md` if it exists and use it as project-specific guidance.
 3. **Ask the user**: "What's your product website?" only if that context is missing or unclear.
 4. **Optionally ask**: "Do you have any screenshots of the product or its navigation you can share?" if the repo structure is not enough.
 5. **Research the website** when useful:
@@ -165,7 +165,7 @@ Avoid vague prompts like:
 
 ### Phase 2: Generate the outline
 
-Using everything you gathered, generate `.agency-knows/outline.json`:
+Using everything you gathered, generate `.agency-kb/outline.json`:
 
 ```json
 {
@@ -232,8 +232,8 @@ Present the proposed TOC clearly and brainstorm with the user. This is a collabo
 ### Phase 4: Write the outline
 
 When the user is satisfied:
-1. Write the final `.agency-knows/outline.json`
-2. Write or update `.agency-knows/PROMPT.md` if you gathered useful product-specific instructions or terminology
+1. Write the final `.agency-kb/outline.json`
+2. Write or update `.agency-kb/PROMPT.md` if you gathered useful product-specific instructions or terminology
 3. Make sure the paths follow the path rules and the JSON is valid
 4. Tell the user the outline is ready for `init`
 5. If the collection is empty, explain that `init --publish` is the bootstrap step
@@ -243,18 +243,18 @@ When the user is satisfied:
 
 1. For an empty collection, use `init` to inspect/bootstrap first
 2. For a non-empty collection, run `agency-knows sync --all` for the first full generation preview (local files only by default)
-3. Preview results in `.agency-knows/upload/` and compare against `.agency-knows/download/`
+3. Preview results in `.agency-kb/upload/` and compare against `.agency-kb/download/`
 4. If the user approves, run `agency-knows sync --all --publish` to push to API
 
 `sync` also saves before/after artifacts to disk:
-- `.agency-knows/download/<path>.md`
-- `.agency-knows/download/<path>.json`
-- `.agency-knows/upload/<path>.md`
-- `.agency-knows/upload/<path>.json`
+- `.agency-kb/download/<path>.md`
+- `.agency-kb/download/<path>.json`
+- `.agency-kb/upload/<path>.md`
+- `.agency-kb/upload/<path>.json`
 
 ## Editing the outline file
 
-When editing `.agency-knows/outline.json`, follow these rules:
+When editing `.agency-kb/outline.json`, follow these rules:
 
 - **Paths**: Use lowercase slug paths with no `.md` suffix and 2-3 segments total (`integrations/slack`, `admin/security/sso`; not `Integrations/Slack` or `integrations/slack.md`)
 - **Globs**: Be specific. Prefer `src/features/auth/**/*.ts` over `**/*auth*`

@@ -78,7 +78,7 @@ async def init(
 
     if not resolved_collection_id:
         rich.print(
-            "[red]No collection id provided and no existing .agency-knows/config.yaml found. "
+            "[red]No collection id provided and no existing .agency-kb/config.yaml found. "
             "Pass --collection-id or create config first.[/red]"
         )
         raise typer.Exit(1)
@@ -105,7 +105,7 @@ async def init(
 
     if not outline_file.exists():
         rich.print(
-            "[yellow]No outline found at .agency-knows/outline.json. "
+            "[yellow]No outline found at .agency-kb/outline.json. "
             "Use the skill to draft the outline first.[/yellow]"
         )
         return
@@ -194,7 +194,7 @@ async def init(
 def validate_outline(
     repo_root: Annotated[Path, typer.Option(help="Repository root")] = Path("."),
 ) -> None:
-    """Validate .agency-knows/outline.json against the schema.
+    """Validate .agency-kb/outline.json against the schema.
 
     Use this after the Claude Code skill writes the outline to check for errors.
     """
@@ -204,7 +204,7 @@ def validate_outline(
     outline_file = outline_path(resolved_root)
 
     if not outline_file.exists():
-        rich.print("[red]No outline found at .agency-knows/outline.json[/red]")
+        rich.print("[red]No outline found at .agency-kb/outline.json[/red]")
         raise typer.Exit(1)
 
     outline = _load_outline(outline_file)
@@ -237,7 +237,7 @@ def preview(
     if not outline_file.exists():
         rich.print(
             "[red]No outline found. Use the Claude Code skill to generate"
-            " .agency-knows/outline.json first.[/red]"
+            " .agency-kb/outline.json first.[/red]"
         )
         raise typer.Exit(1)
 
@@ -459,7 +459,7 @@ async def sync(
     )
     if not publish:
         rich.print(
-            "\n[yellow]Local only.[/yellow] Review results in .agency-knows/upload/, "
+            "\n[yellow]Local only.[/yellow] Review results in .agency-kb/upload/, "
             "then re-run with [cyan]--publish[/cyan] to upload."
         )
 

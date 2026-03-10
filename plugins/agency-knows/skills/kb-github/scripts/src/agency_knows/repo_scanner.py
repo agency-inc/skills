@@ -16,7 +16,7 @@ _SKIP_DIRS = {
     ".next",
     "dist",
     "build",
-    ".agency-knows",
+    ".agency-kb",
     ".turbo",
     "coverage",
     ".mypy_cache",

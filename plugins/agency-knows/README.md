@@ -16,8 +16,8 @@ uv venv .venv && uv pip install -e "."
 # Initialize in your repo
 agency-knows init --collection-id=<your-collection-id>
 
-# Use the /agency:kb-github skill to author .agency-knows/outline.json
-# Add repository-specific writing and product instructions in .agency-knows/PROMPT.md
+# Use the /agency:kb-github skill to author .agency-kb/outline.json
+# Add repository-specific writing and product instructions in .agency-kb/PROMPT.md
 
 # Materialize initial upload artifacts locally (safe by default)
 agency-knows init
@@ -44,10 +44,10 @@ agency-knows sync --diff-base=origin/main --dry-run
 ### Init (first run)
 
 1. Create the collection manually in Agency UI
-2. `agency-knows init --collection-id=...` writes `.agency-knows/config.yaml`
-3. The `/agency:kb-github` skill authors `.agency-knows/outline.json`
-4. `.agency-knows/PROMPT.md` provides repository-specific prompt instructions for init and sync
-5. `agency-knows init` validates the outline and materializes initial files into `.agency-knows/upload/`
+2. `agency-knows init --collection-id=...` writes `.agency-kb/config.yaml`
+3. The `/agency:kb-github` skill authors `.agency-kb/outline.json`
+4. `.agency-kb/PROMPT.md` provides repository-specific prompt instructions for init and sync
+5. `agency-knows init` validates the outline and materializes initial files into `.agency-kb/upload/`
 6. `agency-knows init --publish` uploads those initial docs, but only if the collection is empty
 7. `agency-knows preview` shows which source files match each planned article
 
@@ -66,10 +66,10 @@ Path rules for outline articles:
 `sync` does not create or seed documents. If the configured collection is empty, run init first.
 
 Every `sync` run also saves local artifacts:
-- `.agency-knows/download/<path>.md` — the current document fetched from Agency
-- `.agency-knows/download/<path>.json` — metadata and globs for the fetched doc
-- `.agency-knows/upload/<path>.md` — the newly generated document
-- `.agency-knows/upload/<path>.json` — metadata and file match info for the generated doc
+- `.agency-kb/download/<path>.md` — the current document fetched from Agency
+- `.agency-kb/download/<path>.json` — metadata and globs for the fetched doc
+- `.agency-kb/upload/<path>.md` — the newly generated document
+- `.agency-kb/upload/<path>.json` — metadata and file match info for the generated doc
 
 ## GitHub Actions
 
@@ -85,11 +85,11 @@ Every `sync` run also saves local artifacts:
 
 ## Configuration
 
-Config lives in `.agency-knows/config.yaml`:
+Config lives in `.agency-kb/config.yaml`:
 
 ```yaml
 collection_id: "github:acme/app:product-outline"
 api_base_url: "https://api.agency.inc/external"
 ```
 
-Prompt instructions live in `.agency-knows/PROMPT.md`. Both `init` and `sync` read that file if it exists.
+Prompt instructions live in `.agency-kb/PROMPT.md`. Both `init` and `sync` read that file if it exists.
