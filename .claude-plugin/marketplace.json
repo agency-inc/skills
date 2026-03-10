@@ -1,0 +1,22 @@
+{
+  "name": "agency-skills",
+  "owner": {
+    "name": "Agency",
+    "email": "elias@agency.inc"
+  },
+  "metadata": {
+    "description": "Official skill plugins for Agency",
+    "version": "1.0.0"
+  },
+  "plugins": [
+    {
+      "name": "agency-knows",
+      "source": "./plugins/agency-knows",
+      "description": "Generate and maintain an Agency knowledge base from source code using Claude",
+      "version": "0.1.0",
+      "author": {
+        "name": "Agency"
+      }
+    }
+  ]
+}

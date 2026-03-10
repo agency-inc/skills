@@ -1,0 +1,12 @@
+{
+  "name": "agency-knows",
+  "description": "Generate and maintain an Agency knowledge base from source code using Claude",
+  "version": "0.1.0",
+  "author": {
+    "name": "Agency"
+  },
+  "homepage": "https://agency.inc",
+  "repository": "https://github.com/agency-inc/skills",
+  "license": "MIT",
+  "keywords": ["knowledge-base", "documentation", "agency", "claude"]
+}
