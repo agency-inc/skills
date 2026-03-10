@@ -15,4 +15,4 @@ if [ ! -d .venv ]; then
 fi
 
 uv pip install -e "." --quiet
-echo "agency-knows installed at: $SCRIPTS_DIR/.venv/bin/agency-knows"
+echo "agency-kb installed at: $SCRIPTS_DIR/.venv/bin/agency-kb"

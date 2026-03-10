@@ -9,8 +9,8 @@ from pathlib import Path
 import anthropic
 import rich
 
-from agency_knows.api_client import KnowledgeBaseApiClient
-from agency_knows.schemas import (
+from agency_kb.api_client import KnowledgeBaseApiClient
+from agency_kb.schemas import (
     AnalyzedDocument,
     ExportedOutlineDocument,
     KnowledgeBaseDocument,

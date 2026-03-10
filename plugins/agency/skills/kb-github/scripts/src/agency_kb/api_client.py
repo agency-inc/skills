@@ -7,7 +7,7 @@ from typing import Any
 
 import httpx
 
-from agency_knows.schemas import (
+from agency_kb.schemas import (
     DocumentSourceMetadata,
     KnowledgeBaseDocument,
     _ExternalDocumentResponse,

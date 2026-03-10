@@ -8,8 +8,8 @@ from pathlib import Path
 
 import rich
 
-from agency_knows.repo_scanner import extract_symbols, run_git_command
-from agency_knows.schemas import (
+from agency_kb.repo_scanner import extract_symbols, run_git_command
+from agency_kb.schemas import (
     AnalyzedDocument,
     AnalyzedFile,
     CandidateScore,

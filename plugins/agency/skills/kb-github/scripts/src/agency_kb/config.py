@@ -8,7 +8,7 @@ from pathlib import Path
 import yaml
 from pydantic import ValidationError
 
-from agency_knows.schemas import KbGenConfig
+from agency_kb.schemas import KbGenConfig
 
 CONFIG_DIR = ".agency-kb"
 CONFIG_FILE = "config.yaml"
@@ -60,7 +60,7 @@ def load_config(repo_root: Path) -> KbGenConfig:
     path = config_path(repo_root)
     if not path.exists():
         raise FileNotFoundError(
-            f"No config found at {path}. Run `agency-knows init` to create one."
+            f"No config found at {path}. Run `agency-kb init` to create one."
         )
     raw = yaml.safe_load(path.read_text(encoding="utf-8"))
     try:

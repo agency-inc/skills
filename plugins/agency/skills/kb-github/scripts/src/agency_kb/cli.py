@@ -1,4 +1,4 @@
-"""CLI entrypoint for agency-knows."""
+"""CLI entrypoint for agency-kb."""
 
 from __future__ import annotations
 
@@ -11,9 +11,9 @@ import typer
 import yaml
 from pydantic import ValidationError
 
-from agency_knows.async_typer import AsyncTyper
-from agency_knows.config import load_dotenv
-from agency_knows.schemas import ExportedOutlineDocument, KnowledgeBaseDocument
+from agency_kb.async_typer import AsyncTyper
+from agency_kb.config import load_dotenv
+from agency_kb.schemas import ExportedOutlineDocument, KnowledgeBaseDocument
 
 # Load .env early so ANTHROPIC_API_KEY and AGENCY_API_KEY are available
 load_dotenv()
@@ -46,8 +46,8 @@ async def init(
     repo_root: Annotated[Path, typer.Option(help="Repository root")] = Path("."),
 ) -> None:
     """Initialize local artifacts and optionally publish them to an empty collection."""
-    from agency_knows.api_client import KnowledgeBaseApiClient
-    from agency_knows.config import (
+    from agency_kb.api_client import KnowledgeBaseApiClient
+    from agency_kb.config import (
         config_dir,
         config_path,
         find_repo_root,
@@ -56,12 +56,12 @@ async def init(
         prompt_path,
         resolve_api_key,
     )
-    from agency_knows.init import (
+    from agency_kb.init import (
         build_init_documents,
         publish_init_documents,
         write_init_documents,
     )
-    from agency_knows.schemas import KbGenConfig
+    from agency_kb.schemas import KbGenConfig
 
     resolved_root = repo_root.resolve() if repo_root != Path(".") else find_repo_root()
     cfg_path = config_path(resolved_root)
@@ -187,7 +187,7 @@ async def init(
         )
 
     rich.print(f"[green]Published {created} initial document(s).[/green]")
-    rich.print("Next: run [cyan]agency-knows sync --dry-run[/cyan] to preview generated updates.")
+    rich.print("Next: run [cyan]agency-kb sync --dry-run[/cyan] to preview generated updates.")
 
 
 @app.command(name="validate-outline")
@@ -198,7 +198,7 @@ def validate_outline(
 
     Use this after the Claude Code skill writes the outline to check for errors.
     """
-    from agency_knows.config import find_repo_root, outline_path
+    from agency_kb.config import find_repo_root, outline_path
 
     resolved_root = repo_root.resolve() if repo_root != Path(".") else find_repo_root()
     outline_file = outline_path(resolved_root)
@@ -226,9 +226,9 @@ def preview(
 
     from rich.table import Table
 
-    from agency_knows.analyze import run_analyze
-    from agency_knows.config import find_repo_root, load_config, outline_path
-    from agency_knows.schemas import ExportedOutline, ExportedOutlineDocument, InitOutline
+    from agency_kb.analyze import run_analyze
+    from agency_kb.config import find_repo_root, load_config, outline_path
+    from agency_kb.schemas import ExportedOutline, ExportedOutlineDocument, InitOutline
 
     resolved_root = repo_root.resolve() if repo_root != Path(".") else find_repo_root()
     cfg = load_config(resolved_root)
@@ -319,17 +319,17 @@ async def sync(
     model: Annotated[str, typer.Option(help="Claude model")] = "claude-sonnet-4-20250514",
 ) -> None:
     """Sync KB articles by exporting current docs, generating updates, and uploading them."""
-    from agency_knows.analyze import run_analyze
-    from agency_knows.api_client import KnowledgeBaseApiClient
-    from agency_knows.config import (
+    from agency_kb.analyze import run_analyze
+    from agency_kb.api_client import KnowledgeBaseApiClient
+    from agency_kb.config import (
         config_dir,
         find_repo_root,
         load_config,
         prompt_path,
         resolve_api_key,
     )
-    from agency_knows.export import run_export
-    from agency_knows.generate import GenerationJob, read_source_files, run_generate
+    from agency_kb.export import run_export
+    from agency_kb.generate import GenerationJob, read_source_files, run_generate
 
     resolved_root = repo_root.resolve() if repo_root != Path(".") else find_repo_root()
     cfg = load_config(resolved_root)
@@ -514,7 +514,7 @@ def _artifact_path(*, base_dir: Path, document_path: str, suffix: str) -> Path:
 
 
 def _load_outline(outline_file: Path):
-    from agency_knows.schemas import InitOutline
+    from agency_kb.schemas import InitOutline
 
     try:
         return InitOutline.model_validate_json(outline_file.read_text(encoding="utf-8"))
@@ -530,7 +530,7 @@ def _load_project_prompt(prompt_file: Path) -> str:
 
 
 def _detect_github_owner(repo_root: Path) -> str | None:
-    from agency_knows.repo_scanner import run_git_command
+    from agency_kb.repo_scanner import run_git_command
 
     try:
         lines = run_git_command(repo_root=repo_root, args=["remote", "get-url", "origin"])
@@ -542,7 +542,7 @@ def _detect_github_owner(repo_root: Path) -> str | None:
 
 
 def _detect_github_repo(repo_root: Path) -> str | None:
-    from agency_knows.repo_scanner import run_git_command
+    from agency_kb.repo_scanner import run_git_command
 
     try:
         lines = run_git_command(repo_root=repo_root, args=["remote", "get-url", "origin"])

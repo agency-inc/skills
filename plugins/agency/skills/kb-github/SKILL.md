@@ -1,11 +1,11 @@
 ---
 name: kb-github
-description: Set up and maintain an Agency Knowledge Base from a GitHub repo. Covers authoring an outline, interactively refining the TOC, previewing file matches, and generating content. Use when setting up KB, editing KB outline, or running agency-knows.
+description: Set up and maintain an Agency Knowledge Base from a GitHub repo. Covers authoring an outline, interactively refining the TOC, previewing file matches, and generating content. Use when setting up KB, editing KB outline, or running agency-kb.
 ---
 
 # Agency Knowledge Base (GitHub)
 
-You are the primary intelligence behind generating a knowledge base. The CLI (`agency-knows`) is a thin utility for config, file-matching preview, and content generation. **You** do the research, codebase exploration, outline generation, and collaborative refinement with the user.
+You are the primary intelligence behind generating a knowledge base. The CLI (`agency-kb`) is a thin utility for config, file-matching preview, and content generation. **You** do the research, codebase exploration, outline generation, and collaborative refinement with the user.
 
 ## Data model
 
@@ -53,11 +53,11 @@ Never suggest reinitializing or replacing a non-empty collection automatically.
 
 | Command | What it does |
 |---------|-------------|
-| `agency-knows init` | Read config/outline first, validate local state, and prepare bootstrap artifacts |
-| `agency-knows init --publish` | Publish the initial docs, but only to an empty collection |
-| `agency-knows preview` | Show which source files match each article's globs |
-| `agency-knows sync` | Export existing docs → analyze → generate to local files only (supports `--path-prefix`) |
-| `agency-knows sync --publish` | Same as sync, but also uploads generated articles to the API |
+| `agency-kb init` | Read config/outline first, validate local state, and prepare bootstrap artifacts |
+| `agency-kb init --publish` | Publish the initial docs, but only to an empty collection |
+| `agency-kb preview` | Show which source files match each article's globs |
+| `agency-kb sync` | Export existing docs → analyze → generate to local files only (supports `--path-prefix`) |
+| `agency-kb sync --publish` | Same as sync, but also uploads generated articles to the API |
 
 ### Installing and running the CLI
 
@@ -222,11 +222,11 @@ Present the proposed TOC clearly and brainstorm with the user. This is a collabo
 | "Split settings into general and admin" | Create two entries from one |
 | "The auth glob is wrong, it lives in lib/auth/" | Fix the `globs` array |
 | "Add a topic about rate limiting to the API article" | Append to that article's `topics` |
-| "Show me what files match" | Run `agency-knows preview` and present the results |
+| "Show me what files match" | Run `agency-kb preview` and present the results |
 
 **After each edit:**
 - Show the updated article(s) affected
-- Offer to run `agency-knows preview` to verify file matches
+- Offer to run `agency-kb preview` to verify file matches
 - Ask if they want to continue refining or proceed
 
 ### Phase 4: Write the outline
@@ -242,9 +242,9 @@ When the user is satisfied:
 ### Phase 5: Generate content
 
 1. For an empty collection, use `init` to inspect/bootstrap first
-2. For a non-empty collection, run `agency-knows sync --all` for the first full generation preview (local files only by default)
+2. For a non-empty collection, run `agency-kb sync --all` for the first full generation preview (local files only by default)
 3. Preview results in `.agency-kb/upload/` and compare against `.agency-kb/download/`
-4. If the user approves, run `agency-knows sync --all --publish` to push to API
+4. If the user approves, run `agency-kb sync --all --publish` to push to API
 
 `sync` also saves before/after artifacts to disk:
 - `.agency-kb/download/<path>.md`
@@ -284,6 +284,6 @@ After the initial setup, the `sync` command handles incremental updates:
     AGENCY_API_KEY: ${{ secrets.AGENCY_API_KEY }}
     ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
   run: |
-    pip install agency-knows
-    agency-knows sync --publish --diff-base=origin/main
+    pip install agency-kb
+    agency-kb sync --publish --diff-base=origin/main
 ```

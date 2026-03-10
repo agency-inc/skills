@@ -15,7 +15,7 @@ Add this marketplace to Claude Code, then install the plugin:
 
 | Plugin | Skill | Description |
 |--------|-------|-------------|
-| [agency](plugins/agency-knows/) | `/agency:kb-github` | Agency Knowledge Base (GitHub) |
+| [agency](plugins/agency/) | `/agency:kb-github` | Agency Knowledge Base (GitHub) |
 
 ### Agency Knowledge Base (GitHub)
 
@@ -24,9 +24,9 @@ Turn your codebase into a living knowledge base that Agency's AI assistant can u
 - **Init** -- interactively author a KB outline from your repo, then seed an empty collection
 - **Sync** -- detect source code changes, regenerate affected articles with Claude, and publish updates
 - **Preview** -- see which files match each article's glob patterns before generating
-- **CI-ready** -- run `agency-knows sync` in GitHub Actions to keep docs in sync on every push
+- **CI-ready** -- run `agency-kb sync` in GitHub Actions to keep docs in sync on every push
 
-See the full [README](plugins/agency-knows/README.md) for usage details.
+See the full [README](plugins/agency/README.md) for usage details.
 
 ## Development
 
@@ -47,7 +47,7 @@ make check      # lint + typecheck
   marketplace.json            # marketplace registry
 
 plugins/
-  agency-knows/
+  agency-kb/
     .claude-plugin/
       plugin.json             # plugin manifest
     README.md
@@ -58,7 +58,7 @@ plugins/
           install.sh          # one-time CLI setup
           run.sh              # run the CLI (auto-installs)
           pyproject.toml      # Python package config
-          src/agency_knows/   # CLI source code
+          src/agency_kb/   # CLI source code
 ```
 
 ## Contact

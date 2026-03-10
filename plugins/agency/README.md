@@ -6,37 +6,37 @@ Generate and maintain knowledge base articles from source code using Claude.
 
 ```bash
 # Install (requires uv or pip)
-uvx --from git+https://github.com/agency-inc/skills#subdirectory=plugins/agency-knows agency-knows --help
+uvx --from git+https://github.com/agency-inc/skills#subdirectory=plugins/agency agency-kb --help
 
 # Or clone and install locally
 git clone https://github.com/agency-inc/skills.git
-cd skills/plugins/agency-knows
+cd skills/plugins/agency
 uv venv .venv && uv pip install -e "."
 
 # Initialize in your repo
-agency-knows init --collection-id=<your-collection-id>
+agency-kb init --collection-id=<your-collection-id>
 
 # Use the /agency:kb-github skill to author .agency-kb/outline.json
 # Add repository-specific writing and product instructions in .agency-kb/PROMPT.md
 
 # Materialize initial upload artifacts locally (safe by default)
-agency-knows init
+agency-kb init
 
 # Preview file matches from the outline
-agency-knows preview
+agency-kb preview
 
 # Publish the initial docs only if the collection is empty
 export AGENCY_API_KEY=<your-api-key>
-agency-knows init --publish
+agency-kb init --publish
 
 # Sync existing KB docs from source code
-agency-knows sync --diff-base=origin/main
+agency-kb sync --diff-base=origin/main
 
 # Sync only one area
-agency-knows sync --path-prefix=workflow --diff-base=origin/main
+agency-kb sync --path-prefix=workflow --diff-base=origin/main
 
 # Preview generated docs locally instead of uploading
-agency-knows sync --diff-base=origin/main --dry-run
+agency-kb sync --diff-base=origin/main --dry-run
 ```
 
 ## How it works
@@ -44,12 +44,12 @@ agency-knows sync --diff-base=origin/main --dry-run
 ### Init (first run)
 
 1. Create the collection manually in Agency UI
-2. `agency-knows init --collection-id=...` writes `.agency-kb/config.yaml`
+2. `agency-kb init --collection-id=...` writes `.agency-kb/config.yaml`
 3. The `/agency:kb-github` skill authors `.agency-kb/outline.json`
 4. `.agency-kb/PROMPT.md` provides repository-specific prompt instructions for init and sync
-5. `agency-knows init` validates the outline and materializes initial files into `.agency-kb/upload/`
-6. `agency-knows init --publish` uploads those initial docs, but only if the collection is empty
-7. `agency-knows preview` shows which source files match each planned article
+5. `agency-kb init` validates the outline and materializes initial files into `.agency-kb/upload/`
+6. `agency-kb init --publish` uploads those initial docs, but only if the collection is empty
+7. `agency-kb preview` shows which source files match each planned article
 
 Path rules for outline articles:
 - Do not include a `.md` suffix
@@ -79,8 +79,8 @@ Every `sync` run also saves local artifacts:
     AGENCY_API_KEY: ${{ secrets.AGENCY_API_KEY }}
     ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
   run: |
-    pip install "agency-knows @ git+https://github.com/agency-inc/skills#subdirectory=plugins/agency-knows"
-    agency-knows sync --diff-base=origin/main
+    pip install "agency-kb @ git+https://github.com/agency-inc/skills#subdirectory=plugins/agency"
+    agency-kb sync --diff-base=origin/main
 ```
 
 ## Configuration

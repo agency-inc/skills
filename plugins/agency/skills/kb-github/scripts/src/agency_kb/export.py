@@ -8,8 +8,8 @@ from pathlib import Path
 
 import rich
 
-from agency_knows.api_client import KnowledgeBaseApiClient
-from agency_knows.schemas import (
+from agency_kb.api_client import KnowledgeBaseApiClient
+from agency_kb.schemas import (
     ExportedOutline,
     ExportedOutlineDocument,
     GitHubSourceMetadata,
