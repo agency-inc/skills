@@ -1,11 +1,11 @@
 ---
 name: kb-github
-description: Set up and maintain an Agency Knowledge Base from a GitHub repo. Covers authoring an outline, interactively refining the TOC, previewing file matches, and generating content. Use when setting up KB, editing KB outline, or running agency-kb.
+description: Set up and maintain an Agency Knowledge Base from a GitHub repo. Covers authoring an outline, interactively refining the TOC, and generating content. Use when setting up KB, editing KB outline, or running agency-kb.
 ---
 
 # Agency Knowledge Base (GitHub)
 
-You are the primary intelligence behind generating a knowledge base. The CLI (`agency-kb`) is a thin utility for config, file-matching preview, and content generation. **You** do the research, codebase exploration, outline generation, and collaborative refinement with the user.
+You are the primary intelligence behind generating a knowledge base. The CLI (`agency-kb`) is a thin utility for config, gap scanning, and content generation. **You** do the research, codebase exploration, outline generation, and collaborative refinement with the user.
 
 ## Data model
 
@@ -59,7 +59,6 @@ Never suggest reinitializing or replacing a non-empty collection automatically.
 |---------|-------------|
 | `agency-kb init` | Read config/outline first, validate local state, and prepare bootstrap artifacts |
 | `agency-kb init --publish` | Publish the initial docs, but only to an empty collection |
-| `agency-kb preview` | Show which source files match each article's globs |
 | `agency-kb sync` | Export existing docs → analyze → generate to local files only (supports `--path-prefix`) |
 | `agency-kb sync --publish` | Same as sync, but also uploads generated articles to the API |
 | `agency-kb review` | Export docs to download/, scan for uncovered files, write review/gaps.json |
@@ -76,7 +75,6 @@ sh ${CLAUDE_SKILL_DIR}/scripts/run.sh <command>
 
 # Examples:
 sh ${CLAUDE_SKILL_DIR}/scripts/run.sh init --collection-id=<id>
-sh ${CLAUDE_SKILL_DIR}/scripts/run.sh preview
 sh ${CLAUDE_SKILL_DIR}/scripts/run.sh sync --diff-base=origin/main
 ```
 
@@ -228,11 +226,11 @@ Present the proposed TOC clearly and brainstorm with the user. This is a collabo
 | "Split settings into general and admin" | Create two entries from one |
 | "The auth glob is wrong, it lives in lib/auth/" | Fix the `globs` array |
 | "Add a topic about rate limiting to the API article" | Append to that article's `topics` |
-| "Show me what files match" | Run `agency-kb preview` and present the results |
+| "Show me what files match" | Run `agency-kb sync` (local only) and present the file analysis |
 
 **After each edit:**
 - Show the updated article(s) affected
-- Offer to run `agency-kb preview` to verify file matches
+- Offer to run `agency-kb sync` (local only) to verify file matches
 - Ask if they want to continue refining or proceed
 
 ### Phase 4: Write the outline
