@@ -1,4 +1,4 @@
-# agency-knows
+# Agency Knowledge Base (GitHub)
 
 Generate and maintain knowledge base articles from source code using Claude.
 
@@ -16,7 +16,7 @@ uv venv .venv && uv pip install -e "."
 # Initialize in your repo
 agency-knows init --collection-id=<your-collection-id>
 
-# Use the init skill to author .agency-knows/outline.json
+# Use the /agency:kb-github skill to author .agency-knows/outline.json
 # Add repository-specific writing and product instructions in .agency-knows/PROMPT.md
 
 # Materialize initial upload artifacts locally (safe by default)
@@ -45,7 +45,7 @@ agency-knows sync --diff-base=origin/main --dry-run
 
 1. Create the collection manually in Agency UI
 2. `agency-knows init --collection-id=...` writes `.agency-knows/config.yaml`
-3. The Claude Code init skill authors `.agency-knows/outline.json`
+3. The `/agency:kb-github` skill authors `.agency-knows/outline.json`
 4. `.agency-knows/PROMPT.md` provides repository-specific prompt instructions for init and sync
 5. `agency-knows init` validates the outline and materializes initial files into `.agency-knows/upload/`
 6. `agency-knows init --publish` uploads those initial docs, but only if the collection is empty
@@ -63,7 +63,7 @@ Path rules for outline articles:
 3. **Generate** — call Claude with the previous doc content plus source code context
 4. **Upload** — update the KB documents in Agency, or write preview files locally in `--dry-run`
 
-`sync` does not create or seed documents. If the configured collection is empty, bootstrap it first.
+`sync` does not create or seed documents. If the configured collection is empty, run init first.
 
 Every `sync` run also saves local artifacts:
 - `.agency-knows/download/<path>.md` — the current document fetched from Agency

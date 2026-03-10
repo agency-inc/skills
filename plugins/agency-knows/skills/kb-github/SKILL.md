@@ -1,9 +1,9 @@
 ---
-name: agency-knows
-description: Set up and maintain an Agency knowledge base from source code. Covers bootstrapping an outline, interactively refining the TOC, previewing file matches, and generating content. Use when setting up KB, bootstrapping knowledge base, editing KB outline, or running agency-knows.
+name: kb-github
+description: Set up and maintain an Agency Knowledge Base from a GitHub repo. Covers authoring an outline, interactively refining the TOC, previewing file matches, and generating content. Use when setting up KB, editing KB outline, or running agency-knows.
 ---
 
-# Agency Knows — Knowledge Base from Code
+# Agency Knowledge Base (GitHub)
 
 You are the primary intelligence behind generating a knowledge base. The CLI (`agency-knows`) is a thin utility for config, file-matching preview, and content generation. **You** do the research, codebase exploration, outline generation, and collaborative refinement with the user.
 

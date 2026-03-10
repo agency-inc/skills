@@ -4,20 +4,20 @@ Official [Claude Code](https://docs.anthropic.com/en/docs/claude-code) skill plu
 
 ## Quick start
 
-Add this marketplace to Claude Code, then install any plugin:
+Add this marketplace to Claude Code, then install the plugin:
 
 ```bash
 /plugin marketplace add agency-inc/skills
-/plugin install agency-knows@agency-skills
+/plugin install agency
 ```
 
 ## Available plugins
 
-| Plugin | Description |
-|--------|-------------|
-| [agency-knows](plugins/agency-knows/) | Generate and maintain an Agency knowledge base from source code |
+| Plugin | Skill | Description |
+|--------|-------|-------------|
+| [agency](plugins/agency-knows/) | `/agency:kb-github` | Agency Knowledge Base (GitHub) |
 
-### agency-knows
+### Agency Knowledge Base (GitHub)
 
 Turn your codebase into a living knowledge base that Agency's AI assistant can use to answer customer questions.
 
@@ -26,7 +26,7 @@ Turn your codebase into a living knowledge base that Agency's AI assistant can u
 - **Preview** -- see which files match each article's glob patterns before generating
 - **CI-ready** -- run `agency-knows sync` in GitHub Actions to keep docs in sync on every push
 
-See the full [agency-knows README](plugins/agency-knows/README.md) for usage details.
+See the full [README](plugins/agency-knows/README.md) for usage details.
 
 ## Development
 
@@ -44,21 +44,21 @@ make check      # lint + typecheck
 
 ```
 .claude-plugin/
-  marketplace.json          # marketplace registry
+  marketplace.json            # marketplace registry
 
 plugins/
   agency-knows/
     .claude-plugin/
-      plugin.json           # plugin manifest
+      plugin.json             # plugin manifest
     README.md
     skills/
-      agency-knows/
-        SKILL.md            # Claude Code skill definition
+      kb-github/
+        SKILL.md              # Claude Code skill (/agency:kb-github)
         scripts/
-          install.sh        # one-time CLI setup
-          run.sh            # run the CLI (auto-installs)
-          pyproject.toml    # Python package config
-          src/agency_knows/ # CLI source code
+          install.sh          # one-time CLI setup
+          run.sh              # run the CLI (auto-installs)
+          pyproject.toml      # Python package config
+          src/agency_knows/   # CLI source code
 ```
 
 ## Contact
