@@ -255,6 +255,7 @@ async def sync(
     )
     from agency_kb.export import run_export
     from agency_kb.generate import GenerationJob, read_source_files, run_generate
+    from agency_kb.repo_scanner import get_head_sha
 
     resolved_root = repo_root.resolve() if repo_root != Path(".") else find_repo_root()
     cfg = load_config(resolved_root)
@@ -365,6 +366,7 @@ async def sync(
             rich.print(f"[yellow]Nothing to generate (skipped {skipped}).[/yellow]")
             return
 
+        head_sha = get_head_sha(repo_root=resolved_root)
         rich.print(f"[cyan]Generating {len(jobs)} article(s) (concurrency={concurrency})...[/cyan]")
         generated, errored = await run_generate(
             jobs=jobs,
@@ -375,6 +377,7 @@ async def sync(
             output_dir=upload_dir,
             project_prompt=project_prompt,
             model=model,
+            commit_sha=head_sha,
         )
 
     rich.print(

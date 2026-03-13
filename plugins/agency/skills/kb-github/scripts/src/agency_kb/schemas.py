@@ -120,6 +120,7 @@ class AnalyzedDocument(BaseModel):
     relevant_files: list[str] = Field(default_factory=list)
     changed_files: list[str] = Field(default_factory=list)
     new_files: list[str] = Field(default_factory=list)
+    deleted_files: list[str] = Field(default_factory=list)
     has_matching_changes: bool = False
     candidate_files: list[ScopedFile] = Field(default_factory=list)
     ignored_files: list[ScopedFile] = Field(default_factory=list)
@@ -206,6 +207,7 @@ class MatchResolution(BaseModel):
 class GitChangeSet(BaseModel):
     changed_files: list[str] = Field(default_factory=list)
     new_files: list[str] = Field(default_factory=list)
+    deleted_files: list[str] = Field(default_factory=list)
 
 
 class _ExternalDocumentSummary(BaseModel):

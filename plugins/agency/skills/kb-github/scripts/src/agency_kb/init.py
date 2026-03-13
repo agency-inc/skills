@@ -41,6 +41,7 @@ def build_init_documents(
             repo=github_repo,
             branch=github_branch,
             globs=article.globs,
+            stub=True,
         )
         documents.append(
             InitDocument(
