@@ -16,11 +16,17 @@ The KB is a collection of documents in Agency. Each document has a filesystem-li
 Every conversation starts here. Check the current state and route to the right flow:
 
 1. Read `.agency-kb/config.yaml` — does it exist? Does it have a `collection_id`?
-2. If config exists, run `sh ${CLAUDE_SKILL_DIR}/scripts/run.sh init` to check if the collection has published documents.
+2. Read `.agency-kb/.env` — are the API keys configured?
+3. If both exist, **test the connection by running sync** to see if the collection has documents:
+   ```bash
+   sh ${CLAUDE_SKILL_DIR}/scripts/run.sh sync
+   ```
+   - If it prints "No documents found in collection" → the collection is empty, route to **Init**
+   - If it exports documents and starts analyzing → the collection is live, cancel and route to **Sync** or **Review**
 
-**If never published (empty collection or no config):** You must complete **Init** before anything else. Tell the user: "Let's get your knowledge base set up and published first."
+**If no config, no keys, or empty collection:** You must complete **Init** before anything else. Tell the user: "Let's get your knowledge base set up and published first."
 
-**If already published:** Ask the user: "Do you want to **sync** (update existing articles from code changes) or **review** (find gaps and add new articles)?"
+**If the collection already has documents:** Ask the user: "Your KB has [N] published articles. Do you want to **sync** (update existing articles from code changes) or **review** (find gaps and add new articles)?"
 
 ---
 
