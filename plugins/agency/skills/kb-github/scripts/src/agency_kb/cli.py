@@ -218,6 +218,81 @@ def validate_outline(
 
 
 @app.command()
+async def status(
+    repo_root: Annotated[Path, typer.Option(help="Repository root")] = Path("."),
+    api_key: Annotated[str, typer.Option(help="Agency API key")] = "",
+) -> None:
+    """Check local config and remote collection state.
+
+    Reports what is configured locally and how many documents exist in the
+    remote collection. Use this to decide whether to init, sync, or review.
+    """
+    from agency_kb.config import (
+        config_dir,
+        config_path,
+        find_repo_root,
+        load_config,
+        outline_path,
+        prompt_path,
+        resolve_api_key,
+    )
+
+    resolved_root = repo_root.resolve() if repo_root != Path(".") else find_repo_root()
+    cfg_file = config_path(resolved_root)
+    env_file = config_dir(resolved_root) / ".env"
+    outline_file = outline_path(resolved_root)
+    prompt_file = prompt_path(resolved_root)
+
+    rich.print("[bold]Local state[/bold]")
+    rich.print(f"  config.yaml:  {'[green]found[/green]' if cfg_file.exists() else '[red]missing[/red]'}")
+    rich.print(f"  .env:         {'[green]found[/green]' if env_file.exists() else '[red]missing[/red]'}")
+    rich.print(f"  outline.json: {'[green]found[/green]' if outline_file.exists() else '[yellow]missing[/yellow]'}")
+    rich.print(f"  PROMPT.md:    {'[green]found[/green]' if prompt_file.exists() else '[yellow]missing[/yellow]'}")
+
+    if not cfg_file.exists():
+        rich.print("\n[red]No config found. Run init to set up.[/red]")
+        raise typer.Exit(1)
+
+    cfg = load_config(resolved_root)
+    rich.print(f"  collection_id: {cfg.collection_id}")
+
+    try:
+        resolved_key = resolve_api_key(api_key or None)
+    except ValueError:
+        rich.print("\n[red]No API key found. Add AGENCY_API_KEY to .agency-kb/.env[/red]")
+        raise typer.Exit(1)
+
+    from agency_kb.api_client import KnowledgeBaseApiClient
+
+    rich.print("\n[bold]Remote state[/bold]")
+    async with KnowledgeBaseApiClient(
+        base_url=cfg.api_base_url,
+        api_key=resolved_key,
+    ) as kb_api:
+        try:
+            documents = await kb_api.list_documents(collection_id=cfg.collection_id)
+        except Exception as exc:
+            rich.print(f"  [red]API error: {exc}[/red]")
+            raise typer.Exit(1) from exc
+
+    if not documents:
+        rich.print("  [yellow]Collection is empty (0 documents)[/yellow]")
+        rich.print("\n[cyan]Next step:[/cyan] Complete init to create and publish your first articles.")
+    else:
+        stub_count = sum(
+            1
+            for d in documents
+            if hasattr(d.metadata_, "stub") and d.metadata_.stub
+        )
+        rich.print(f"  [green]{len(documents)} document(s) in collection[/green]")
+        if stub_count:
+            rich.print(f"  [yellow]{stub_count} stub(s) awaiting content generation[/yellow]")
+        rich.print(
+            "\n[cyan]Next step:[/cyan] Run sync to update articles or review to find gaps."
+        )
+
+
+@app.command()
 async def sync(
     repo_root: Annotated[Path, typer.Option(help="Repository root")] = Path("."),
     api_key: Annotated[str, typer.Option(help="Agency API key")] = "",

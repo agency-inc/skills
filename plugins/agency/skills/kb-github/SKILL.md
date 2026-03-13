@@ -13,20 +13,18 @@ The KB is a collection of documents in Agency. Each document has a filesystem-li
 
 ## Entry point
 
-Every conversation starts here. Check the current state and route to the right flow:
+Every conversation starts here. Run the status command to check what's set up:
 
-1. Read `.agency-kb/config.yaml` — does it exist? Does it have a `collection_id`?
-2. Read `.agency-kb/.env` — are the API keys configured?
-3. If both exist, **test the connection by running sync** to see if the collection has documents:
-   ```bash
-   sh ${CLAUDE_SKILL_DIR}/scripts/run.sh sync
-   ```
-   - If it prints "No documents found in collection" → the collection is empty, route to **Init**
-   - If it exports documents and starts analyzing → the collection is live, cancel and route to **Sync** or **Review**
+```bash
+sh ${CLAUDE_SKILL_DIR}/scripts/run.sh status
+```
 
-**If no config, no keys, or empty collection:** You must complete **Init** before anything else. Tell the user: "Let's get your knowledge base set up and published first."
+This checks local files (config, .env, outline, PROMPT.md) and queries the remote collection. Read its output and route accordingly:
 
-**If the collection already has documents:** Ask the user: "Your KB has [N] published articles. Do you want to **sync** (update existing articles from code changes) or **review** (find gaps and add new articles)?"
+- **Config or keys missing** → Start at **Init step 1** (collect setup info)
+- **Collection is empty (0 documents)** → Start at **Init step 3** (research) if PROMPT.md is missing, or **Init step 5** (generate outline) if PROMPT.md exists
+- **Collection has documents** → Ask the user: "Your KB has N published articles. Do you want to **sync** (update existing articles from code changes) or **review** (find gaps and add new articles)?"
+- **Stubs awaiting content** → Tell the user and offer to run `sync --all --publish` to generate content for them
 
 ---
 
@@ -263,6 +261,7 @@ sh ${CLAUDE_SKILL_DIR}/scripts/run.sh sync --all --publish
 
 | Command | What it does |
 |---------|-------------|
+| `agency-kb status` | Check local config and remote collection state |
 | `agency-kb init` | Validate config and outline, preview bootstrap artifacts |
 | `agency-kb init --publish` | Publish initial docs to an empty collection |
 | `agency-kb sync` | Export, analyze, generate locally (`--path-prefix`, `--all`, `--diff-base`) |
