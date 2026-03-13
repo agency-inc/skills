@@ -2,7 +2,7 @@
 name = "agency-kb"
 version = "0.5.0"
 description = "Generate and maintain knowledge base articles from source code"
-readme = "README.md"
+
 requires-python = ">=3.11"
 license = "MIT"
 dependencies = [
