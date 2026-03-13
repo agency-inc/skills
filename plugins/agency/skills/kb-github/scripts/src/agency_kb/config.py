@@ -39,16 +39,19 @@ def analysis_path(repo_root: Path) -> Path:
 
 
 def load_dotenv() -> None:
-    """Load .env file from the tool directory if it exists."""
-    # Check cwd first, then the tool package directory
-    for search_dir in [Path.cwd(), Path(__file__).resolve().parent.parent.parent]:
-        env_file = search_dir / ".env"
+    """Load .env file if it exists. Checks .agency-kb/.env, repo root, then package dir."""
+    cwd = Path.cwd()
+    for env_file in [
+        cwd / CONFIG_DIR / ".env",
+        cwd / ".env",
+        Path(__file__).resolve().parent.parent.parent / ".env",
+    ]:
         if env_file.is_file():
-            for line in env_file.read_text(encoding="utf-8").splitlines():
-                line = line.strip()
-                if not line or line.startswith("#") or "=" not in line:
+            for raw_line in env_file.read_text(encoding="utf-8").splitlines():
+                stripped = raw_line.strip()
+                if not stripped or stripped.startswith("#") or "=" not in stripped:
                     continue
-                key, _, value = line.partition("=")
+                key, _, value = stripped.partition("=")
                 key = key.strip()
                 value = value.strip().strip("\"'")
                 if key and key not in os.environ:
@@ -75,7 +78,7 @@ def resolve_api_key(api_key: str | None) -> str:
             f"API key not found. Either:\n"
             f"  - Pass --api-key=<key>\n"
             f"  - Set {API_KEY_ENV_VAR} in your environment\n"
-            f"  - Add {API_KEY_ENV_VAR}=<key> to a .env file"
+            f"  - Add {API_KEY_ENV_VAR}=<key> to .agency-kb/.env"
         )
     return resolved
 
