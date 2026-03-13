@@ -189,6 +189,12 @@ def get_readme_content(repo_root: Path) -> str:
     return ""
 
 
+def get_head_sha(*, repo_root: Path) -> str:
+    """Return the full SHA of HEAD."""
+    lines = run_git_command(repo_root=repo_root, args=["rev-parse", "HEAD"])
+    return lines[0].strip() if lines else ""
+
+
 def run_git_command(*, repo_root: Path, args: list[str]) -> list[str]:
     result = subprocess.run(  # noqa: S603, S607
         ["git", *args],

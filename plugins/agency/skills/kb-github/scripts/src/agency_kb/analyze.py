@@ -73,6 +73,8 @@ def run_analyze(
         relevant_files = sorted(set(relevant_files))
         changed = [p for p in relevant_files if p in git_changes.changed_files]
         new = [p for p in relevant_files if p in git_changes.new_files]
+        all_known_paths = set(document.files) | set(resolution.matched_files)
+        deleted = [p for p in git_changes.deleted_files if p in all_known_paths]
         analyzed_files = [analyzed_by_path[p] for p in relevant_files if p in analyzed_by_path]
 
         analyzed_documents.append(
@@ -87,7 +89,8 @@ def run_analyze(
                 relevant_files=relevant_files,
                 changed_files=changed,
                 new_files=new,
-                has_matching_changes=bool(changed or new),
+                deleted_files=deleted,
+                has_matching_changes=bool(changed or new or deleted),
                 candidate_files=candidate_files,
                 ignored_files=ignored_files,
                 missing_files=resolution.missing_files,
@@ -157,20 +160,29 @@ def _resolve_matches(*, repo_root: Path, files: list[str], globs: list[str]) -> 
 def _get_git_changes(*, repo_root: Path, diff_base: str | None) -> GitChangeSet:
     changed: set[str] = set()
     new: set[str] = set()
+    deleted: set[str] = set()
 
     if diff_base is not None:
         lines = run_git_command(
             repo_root=repo_root,
-            args=["diff", "--name-status", "--diff-filter=ACMR", f"{diff_base}...HEAD"],
+            args=["diff", "--name-status", "--diff-filter=ACMRD", f"{diff_base}...HEAD"],
         )
         for line in lines:
-            status, _, path = line.partition("\t")
-            if not path:
+            parts = line.split("\t")
+            if len(parts) < 2:
                 continue
-            if status == "A":
-                new.add(path)
+            status = parts[0]
+            if status.startswith("R"):
+                # Rename: old_path -> new_path; treat old as deleted, new as new
+                if len(parts) >= 3:
+                    deleted.add(parts[1])
+                    new.add(parts[2])
+            elif status == "A":
+                new.add(parts[1])
+            elif status == "D":
+                deleted.add(parts[1])
             else:
-                changed.add(path)
+                changed.add(parts[1])
 
         for path in run_git_command(
             repo_root=repo_root,
@@ -191,10 +203,16 @@ def _get_git_changes(*, repo_root: Path, diff_base: str | None) -> GitChangeSet:
                 path = path.split("->", maxsplit=1)[1].strip()
             if status == "??":
                 new.add(path)
+            elif status.strip() == "D":
+                deleted.add(path)
             else:
                 changed.add(path)
 
-    return GitChangeSet(changed_files=sorted(changed), new_files=sorted(new))
+    return GitChangeSet(
+        changed_files=sorted(changed),
+        new_files=sorted(new),
+        deleted_files=sorted(deleted),
+    )
 
 
 def _analyze_file(*, repo_root: Path, relative_path: str) -> AnalyzedFile:

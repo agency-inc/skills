@@ -13,6 +13,7 @@ from agency_kb.api_client import KnowledgeBaseApiClient
 from agency_kb.schemas import (
     AnalyzedDocument,
     ExportedOutlineDocument,
+    GitHubSourceMetadata,
     KnowledgeBaseDocument,
 )
 
@@ -143,6 +144,7 @@ async def run_generate(
     output_dir: Path | None = None,
     project_prompt: str = "",
     model: str = _GENERATE_MODEL,
+    commit_sha: str = "",
 ) -> tuple[int, int]:
     """Run LLM generation for a batch of jobs. Returns (generated_count, error_count)."""
     client = anthropic.AsyncAnthropic()
@@ -200,9 +202,11 @@ async def run_generate(
                                 "source_id": job.existing_document.source_id,
                                 "summary": result["summary"],
                                 "metadata": job.existing_document.metadata_.model_dump(),
+                                "commit_sha": commit_sha,
                                 "relevant_files": job.analyzed_document.relevant_files,
                                 "changed_files": job.analyzed_document.changed_files,
                                 "new_files": job.analyzed_document.new_files,
+                                "deleted_files": job.analyzed_document.deleted_files,
                             },
                             indent=2,
                         ),
@@ -210,6 +214,12 @@ async def run_generate(
                     )
 
                 if kb_api:
+                    publish_metadata = job.existing_document.metadata_
+                    if isinstance(publish_metadata, GitHubSourceMetadata):
+                        updates: dict[str, object] = {"stub": False}
+                        if commit_sha:
+                            updates["commit_sha"] = commit_sha
+                        publish_metadata = publish_metadata.model_copy(update=updates)
                     await kb_api.put_document(
                         document_id=job.existing_document.id,
                         body={
@@ -218,7 +228,7 @@ async def run_generate(
                             "path": job.existing_document.path,
                             "collection_id": job.existing_document.collection_id,
                             "source_id": job.existing_document.source_id,
-                            "metadata": job.existing_document.metadata_.model_dump(),
+                            "metadata": publish_metadata.model_dump(),
                         },
                     )
                     destination = out_path if out_path else "API"
