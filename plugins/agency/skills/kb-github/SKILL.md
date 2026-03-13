@@ -5,290 +5,229 @@ description: Set up and maintain an Agency Knowledge Base from a GitHub repo. Co
 
 # Agency Knowledge Base (GitHub)
 
-You are the primary intelligence behind generating a knowledge base. The CLI (`agency-kb`) is a thin utility for config, gap scanning, and content generation. **You** do the research, codebase exploration, outline generation, and collaborative refinement with the user.
+You are the primary intelligence behind generating a knowledge base from source code. The CLI (`agency-kb`) is a thin utility — **you** do the research, exploration, outline generation, and refinement.
 
-## Data model
+## How it works
 
-The KB is a **filesystem**. Documents live inside collections:
+The KB is a collection of documents in Agency. Each document has a filesystem-like path (`integrations/slack`, `admin/security/sso`), content in markdown, and metadata linking it to source code via globs. Collections are created manually in the Agency UI — this skill does not create them.
 
+## Entry point
+
+Every conversation starts here. Check the current state and route to the right flow:
+
+1. Read `.agency-kb/config.yaml` — does it exist? Does it have a `collection_id`?
+2. If config exists, run `sh ${CLAUDE_SKILL_DIR}/scripts/run.sh init` to check if the collection has published documents.
+
+**If never published (empty collection or no config):** You must complete **Init** before anything else. Tell the user: "Let's get your knowledge base set up and published first."
+
+**If already published:** Ask the user: "Do you want to **sync** (update existing articles from code changes) or **review** (find gaps and add new articles)?"
+
+---
+
+## Init
+
+Goal: get from zero to a published collection. Walk the user through every sub-step — don't skip ahead.
+
+### 1. Collect all setup info upfront
+
+Before doing anything else, gather everything you need **in a single message**. Don't drip-feed questions one at a time. Ask for all of these at once:
+
+> To get started, I need a few things:
+>
+> 1. **Collection ID** — from the Agency UI (see below for how to find it)
+> 2. **Agency API key** — from Agency settings (see below)
+> 3. **Anthropic API key** — from console.anthropic.com
+> 4. **Product website or docs URL** — so I can understand your product
+>
+> **How to get your Collection ID:**
+> - In Agency, go to **Knowledge** in the left sidebar, then **Knowledge Base**
+> - If you don't have a collection yet: click **Create New Collection**, give it a name, and choose visibility (Internal = for your team's questions, Public = used in customer responses)
+> - Find your collection in the list, hover over it, click the **⋯** menu, and select **Copy Collection ID**
+>
+> **How to get your Agency API key:**
+> - In Agency, go to **Settings > API**
+> - Click **Create API Key**, give it a name like "Knowledge Base Sync", and click Create
+> - Copy the key immediately — it's only shown once (note: there's no visual feedback when you click copy, but it does work)
+>
+> **Anthropic API key:**
+> - Go to https://console.anthropic.com/settings/keys
+> - Create a new key or copy an existing one
+
+Wait for the user to provide all of these before proceeding.
+
+### 2. Write config and credentials
+
+Once you have everything:
+
+1. **Write `.agency-kb/config.yaml`:**
+   ```yaml
+   collection_id: <their-collection-id>
+   api_base_url: https://api.agency.inc/external
+   ```
+
+2. **Write `.agency-kb/.env`:**
+   ```
+   AGENCY_API_KEY=<their-agency-key>
+   ANTHROPIC_API_KEY=<their-anthropic-key>
+   ```
+
+3. **Verify `.agency-kb/.env` is gitignored.** Check if `.gitignore` exists and includes `.env` or `.agency-kb/.env`. If not, add it. Tell the user: "I've added `.agency-kb/.env` to `.gitignore` to keep your keys out of version control."
+
+### 3. Research the product
+
+You need to understand the product before writing anything.
+
+1. **Search the web**: Fetch the homepage and/or docs URL the user provided. Extract:
+   - What the product does (value proposition)
+   - Key features and capabilities
+   - Target users and personas
+   - Navigation structure and terminology
+   - Integrations and connected services
+2. **Explore the codebase**:
+   - Read the README
+   - Scan directory structure with `Glob`
+   - Find route/page files (Next.js `app/**/page.tsx`, React Router, etc.)
+   - Read config files (`package.json`, `pyproject.toml`, etc.)
+   - Skim feature directories
+
+### 4. Write PROMPT.md
+
+Write `.agency-kb/PROMPT.md` before the outline. This gives the LLM product-specific context when generating article content later. Include:
+
+- Product name and what it does (from the website)
+- Key terminology (e.g., "workspace" not "organization", "deal" not "opportunity")
+- Target audience
+- Tone (e.g., "concise like Linear docs", "professional like Stripe docs")
+- Navigation structure (top-level sections users see)
+- What to emphasize or avoid
+
+Example:
+
+```markdown
+# Product context
+
+Acme CRM is a sales pipeline tool for B2B teams. Users are sales reps and managers.
+
+## Terminology
+- "deal" not "opportunity"
+- "pipeline" not "funnel"
+- "workspace" not "organization"
+
+## Tone
+Concise, second person, practical. Like Linear or Notion help docs.
+
+## Navigation
+Main sidebar: Inbox, Pipeline, Contacts, Reporting, Settings.
+
+## Notes
+- Mobile app is in beta — don't document it yet
+- Admin features are under Settings > Organization
 ```
-Collection (id, name, org_id, source_type)
-└── Document (id, title, path, content, collection_id, source_id, metadata)
-    - path: slug-based like a filesystem ("integrations/slack", "getting-started/onboarding")
-    - path is unique per collection (only one active doc per path)
-    - metadata: { source_type: "github", owner, repo, branch, globs, stub }
-```
 
-The outline you generate maps to this structure — each article becomes a document with a filesystem path.
+If `PROMPT.md` already exists, read it and ask if the user wants to update it with what you learned from web research.
 
-**Important:** Collections are created manually in the Agency UI. The skill and CLI do not create collections. The `collection_id` is provided by the user during `init`.
+### 5. Generate the outline
 
-## Product model
+Draft the outline and present it to the user **before writing JSON**:
 
-Treat the workflow as three separate responsibilities:
+- Group articles by category (path prefix)
+- Show title, path, summary, and topics for each
+- Highlight areas you're unsure about
 
-- **Collection management** happens manually in the Agency UI
-- **Outline authoring** is the skill's job
-- **Document bootstrap and updates** are the CLI's job
+**Outline rules:**
+- Every article documents something a user can see, do, or configure
+- One article per feature area (Stripe/Linear help docs level)
+- Paths: lowercase slugs, 2-3 segments (`integrations/slack`, `admin/security/sso`)
+- Globs: specific patterns mapping to source files
+- Topics: 3-8 bullet points, user-facing behavior only
+- Cover all major areas — better to propose too many and trim
 
-The intended source of truth by phase is:
+After the user approves, write `.agency-kb/outline.json`.
 
-- **Prompting context**: `.agency-kb/PROMPT.md`
-- **Before bootstrap**: `.agency-kb/outline.json`
-- **After bootstrap**: the collection contents in Agency
-- **Steady state**: `sync` should be driven by the collection contents in Agency, not by the local outline
+### 6. Publish
 
-The intended command semantics are:
-
-- `init`
-  Safe by default. Read existing config and outline first, validate them, inspect the target collection, and materialize what would be uploaded.
-- `init --publish`
-  Only for bootstrapping an **empty** collection from `.agency-kb/outline.json`.
-- `sync`
-  The normal ongoing command. Export current docs from Agency, generate updates, and only regenerate changed docs unless `--all` is specified.
-- `review`
-  Discovery only. Export current docs, scan the repo for uncovered source files, and write `review/gaps.json`. The skill then analyzes the gaps and proposes new articles.
-- `review --publish`
-  Create stub articles from `.json` proposals in `review/`. Stubs are title + topic bullets. Run `sync --all --publish` afterward to generate full content.
-
-Never suggest reinitializing or replacing a non-empty collection automatically.
-
-## CLI commands
-
-| Command | What it does |
-|---------|-------------|
-| `agency-kb init` | Read config/outline first, validate local state, and prepare bootstrap artifacts |
-| `agency-kb init --publish` | Publish the initial docs, but only to an empty collection |
-| `agency-kb sync` | Export existing docs → analyze → generate to local files only (supports `--path-prefix`) |
-| `agency-kb sync --publish` | Same as sync, but also uploads generated articles to the API |
-| `agency-kb review` | Export docs to download/, scan for uncovered files, write review/gaps.json |
-| `agency-kb review --publish` | Create stub articles from .json proposals in review/, then run sync to generate content |
-
-### Installing and running the CLI
+Run init to validate, then publish:
 
 ```bash
-# One-time install (auto-runs on first use if needed)
-sh ${CLAUDE_SKILL_DIR}/scripts/install.sh
-
-# Run any command
-sh ${CLAUDE_SKILL_DIR}/scripts/run.sh <command>
-
-# Examples:
+# Preview
 sh ${CLAUDE_SKILL_DIR}/scripts/run.sh init --collection-id=<id>
+
+# Publish stubs (only works on empty collections)
+sh ${CLAUDE_SKILL_DIR}/scripts/run.sh init --publish
+```
+
+Then generate full content. Run all articles with concurrency — this is the default, don't make the user ask for it:
+
+```bash
+# Preview locally
+sh ${CLAUDE_SKILL_DIR}/scripts/run.sh sync --all
+
+# Publish to Agency
+sh ${CLAUDE_SKILL_DIR}/scripts/run.sh sync --all --publish
+```
+
+**Before running sync**, tell the user approximately how many articles will be generated so they know what to expect in terms of time and API usage. For example: "This will generate 24 articles. With concurrency of 4, it should take a few minutes and use roughly X Anthropic API calls."
+
+**Init is complete when full content is published.** Only then can the user move to sync or review.
+
+---
+
+## Sync
+
+Goal: update existing articles based on code changes.
+
+```bash
+# Incremental (only changed articles)
+sh ${CLAUDE_SKILL_DIR}/scripts/run.sh sync --publish --diff-base=origin/main
+
+# Full regeneration
+sh ${CLAUDE_SKILL_DIR}/scripts/run.sh sync --all --publish
+
+# Preview locally first (omit --publish)
 sh ${CLAUDE_SKILL_DIR}/scripts/run.sh sync --diff-base=origin/main
 ```
 
-## Init conversation contract
+Results are saved to `.agency-kb/upload/` for review before publishing. Without `--publish`, nothing is uploaded.
 
-When the user is creating or updating the outline, guide them through a short, explicit flow.
+For CI (GitHub Actions):
 
-### 1. Inspect existing state first
-
-Before proposing anything new:
-- Read `.agency-kb/config.yaml` if it exists
-- Read `.agency-kb/PROMPT.md` if it exists
-- Read `.agency-kb/outline.json` if it exists
-- Summarize what already exists before suggesting changes
-
-If both files already exist:
-- Do not immediately overwrite them
-- First ask whether the user wants to keep, refine, or replace the current outline
-
-If only config exists:
-- Confirm the collection id and tell the user you will draft or revise the outline next
-
-If only outline exists:
-- Summarize the outline and ask whether to reuse it or replace it
-
-If neither exists:
-- Start the normal first-time init flow
-
-Also inspect the remote collection state when relevant:
-- If the collection is empty, explain that `init --publish` will bootstrap the first document set from the outline
-- If the collection already has docs, explain that `sync` is the normal next step and `init` should stay non-destructive
-
-### 2. Keep the user interaction narrow and useful
-
-Ask at most 1-2 focused questions before exploring. Good questions:
-- What product or workspace should this outline cover?
-- Is there an existing docs or marketing site I should use for terminology?
-- Should this outline focus on end-user workflows, admin setup, or both?
-
-Do not ask broad, repetitive brainstorming questions up front. Build a first draft quickly, then refine it with the user.
-
-### 3. Present drafts before writing JSON
-
-Do not dump raw JSON immediately unless the user asks for it.
-
-First present:
-- categories
-- article titles
-- paths
-- brief summaries
-
-Group by the first path segment. Highlight uncertain areas explicitly. Ask for approval or edits before writing `.agency-kb/outline.json`.
-
-### 4. Use concrete guidance language
-
-When guiding the user, prefer messages like:
-- "I found an existing outline with 34 articles across getting-started, workflow, integrations, and admin. I can refine that instead of starting over."
-- "I don't see an outline yet. I'll draft one from the repo structure and then we can trim or split articles."
-- "This first draft is intentionally broad. We can remove low-value articles after checking file matches."
-- "Before I write the JSON, I want to confirm the category structure and article paths."
-- "The collection itself should already exist in Agency. Once the outline looks right, `init --publish` should only be used if that collection is empty."
-- "After the first bootstrap, `sync` should be the command people normally run."
-
-Avoid vague prompts like:
-- "What do you want in the outline?"
-- "Tell me everything about your product."
-
-## Skill workflow
-
-### Phase 1: Gather context
-
-1. Inspect `.agency-kb/config.yaml` and `.agency-kb/outline.json` first if they exist.
-2. Inspect `.agency-kb/PROMPT.md` if it exists and use it as project-specific guidance.
-3. **Ask the user**: "What's your product website?" only if that context is missing or unclear.
-4. **Optionally ask**: "Do you have any screenshots of the product or its navigation you can share?" if the repo structure is not enough.
-5. **Research the website** when useful:
-   - What the product does (core value proposition)
-   - Key features and capabilities
-   - Target users/personas
-   - Navigation structure (from marketing site or docs)
-   - Key terminology and concepts
-   - Integrations and connected services
-6. **Explore the codebase**:
-   - Read the README
-   - Scan the directory structure (use `Glob` with patterns like `**/*`)
-   - Look for route/page files to understand product navigation:
-     - Next.js: `app/**/page.tsx`, `pages/**/*.tsx`
-     - React Router: files with `<Route` or `createBrowserRouter`
-     - Other frameworks: look for routing patterns
-   - Read key config files (`package.json`, `pyproject.toml`, etc.)
-   - Skim a few feature directories to understand the codebase organization
-
-### Phase 2: Generate the outline
-
-Using everything you gathered, generate `.agency-kb/outline.json`:
-
-```json
-{
-  "product_name": "Acme CRM",
-  "product_summary": "Acme CRM helps sales teams manage their pipeline...",
-  "articles": [
-    {
-      "title": "Pipeline management",
-      "path": "features/pipeline-management",
-      "summary": "How to create, view, and manage your sales pipeline",
-      "globs": ["src/features/pipeline/**/*.ts", "src/pages/pipeline/**"],
-      "topics": [
-        "What the pipeline view shows and how to navigate it",
-        "Creating and moving deals through stages",
-        "Customizing pipeline stages",
-        "Filtering and sorting deals",
-        "Pipeline analytics and forecasting"
-      ]
-    }
-  ]
-}
+```yaml
+- name: Update knowledge base
+  env:
+    AGENCY_API_KEY: ${{ secrets.AGENCY_API_KEY }}
+    ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+  run: |
+    pip install agency-kb
+    agency-kb sync --publish --diff-base=origin/main
 ```
 
-**Outline rules:**
-- **User-facing only**: Every article documents something a user can see, do, or configure. Skip internals, dev tooling, CI/CD, infrastructure.
-- **Right granularity**: One article per feature area. Think Stripe/Linear/Notion help docs level.
-- **Paths**: Lowercase slug paths with forward slashes, no `.md` suffix, and 2-3 segments total (`integrations/slack`, `admin/security/sso`; not `Integrations/Slack` or `integrations/slack.md`).
-- **Globs**: Specific patterns mapping articles to source files. Use the directory structure you explored.
-- **Topics**: 3-8 bullet points per article. Focus on user-facing behavior, not implementation.
-- **Completeness**: Cover all major product areas. Better to propose too many (they can be removed).
+---
 
-### Phase 3: Brainstorm with the user (interactive loop)
+## Review
 
-Present the proposed TOC clearly and brainstorm with the user. This is a collaborative conversation — help them think through what should be documented.
+Goal: find coverage gaps and add new articles to an existing collection.
 
-**How to present the outline:**
-- Group articles by category (the path prefix)
-- Show title, path, and a brief summary for each
-- Highlight any areas you're unsure about
-
-**Prompt the user with questions like:**
-- "Does this cover all the major features your users care about?"
-- "Are there features I missed that aren't obvious from the codebase?"
-- "Should any of these be split or merged?"
-- "Are the categories/groupings right?"
-
-**Common refinement actions:**
-
-| User says | You do |
-|-----------|--------|
-| "Add an article about billing" | Add a new entry with appropriate title, path, globs, and topics |
-| "Remove the deployment article" | Remove that entry |
-| "Merge auth and SSO" | Combine both entries — merge globs and topics |
-| "Split settings into general and admin" | Create two entries from one |
-| "The auth glob is wrong, it lives in lib/auth/" | Fix the `globs` array |
-| "Add a topic about rate limiting to the API article" | Append to that article's `topics` |
-| "Show me what files match" | Run `agency-kb sync` (local only) and present the file analysis |
-
-**After each edit:**
-- Show the updated article(s) affected
-- Offer to run `agency-kb sync` (local only) to verify file matches
-- Ask if they want to continue refining or proceed
-
-### Phase 4: Write the outline
-
-When the user is satisfied:
-1. Write the final `.agency-kb/outline.json`
-2. Write or update `.agency-kb/PROMPT.md` if you gathered useful product-specific instructions or terminology
-3. Make sure the paths follow the path rules and the JSON is valid
-4. Tell the user the outline is ready for `init`
-5. If the collection is empty, explain that `init --publish` is the bootstrap step
-6. If the collection already has docs, explain that they should use `sync` instead of trying to replace the collection
-
-### Phase 5: Generate content
-
-1. For an empty collection, use `init` to inspect/bootstrap first
-2. For a non-empty collection, run `agency-kb sync --all` for the first full generation preview (local files only by default)
-3. Preview results in `.agency-kb/upload/` and compare against `.agency-kb/download/`
-4. If the user approves, run `agency-kb sync --all --publish` to push to API
-
-`sync` also saves before/after artifacts to disk:
-- `.agency-kb/download/<path>.md`
-- `.agency-kb/download/<path>.json`
-- `.agency-kb/upload/<path>.md`
-- `.agency-kb/upload/<path>.json`
-
-## Review workflow (adding new articles to an existing KB)
-
-Use this workflow when the user wants to find coverage gaps and add new articles to an existing collection.
-
-### Step 1: Run the gap scan
+### 1. Scan for gaps
 
 ```bash
 sh ${CLAUDE_SKILL_DIR}/scripts/run.sh review
 ```
 
-This exports current docs to `.agency-kb/download/` and writes `.agency-kb/review/gaps.json` listing uncovered source files grouped by directory.
+This writes `.agency-kb/review/gaps.json` listing uncovered source files.
 
-### Step 2: Analyze the gaps
+### 2. Analyze and propose
 
-Read `.agency-kb/review/gaps.json` and the existing articles in `.agency-kb/download/`. Explore the uncovered source files to understand what they do. Not every uncovered file needs an article — focus on user-facing features and workflows.
+Read the gaps file and explore the uncovered source files. Not every gap needs an article — focus on user-facing features. Present proposals to the user and get approval.
 
-**Present findings to the user:**
-- Which uncovered areas represent real documentation gaps
-- Which are internal/infrastructure and can be ignored
-- Proposed new articles with title, path, globs, and topics
+### 3. Write proposals
 
-**Ask the user** which proposals to proceed with.
-
-### Step 3: Write proposals
-
-For each approved proposal, write a `.json` file to `.agency-kb/review/`:
+For each approved article, write a `.json` file to `.agency-kb/review/`:
 
 ```json
-// .agency-kb/review/category/feature-name.json
 {
   "title": "Feature Name",
   "path": "category/feature-name",
-  "topics": ["Topic 1", "Topic 2", "Topic 3"],
+  "topics": ["Topic 1", "Topic 2"],
   "globs": ["src/features/feature/**/*.ts"],
   "source_id": "github:owner/repo:main",
   "metadata": {
@@ -301,56 +240,41 @@ For each approved proposal, write a `.json` file to `.agency-kb/review/`:
 }
 ```
 
-Get the `source_id`, `owner`, `repo`, and `branch` from an existing article's metadata in `.agency-kb/download/`.
+Get `source_id`, `owner`, `repo`, `branch` from an existing article's metadata in `.agency-kb/download/`.
 
-### Step 4: Publish stubs
+### 4. Publish
 
 ```bash
 sh ${CLAUDE_SKILL_DIR}/scripts/run.sh review --publish
-```
-
-This creates stub articles (title + topic bullets) in the collection for each proposal.
-
-### Step 5: Generate full content
-
-```bash
 sh ${CLAUDE_SKILL_DIR}/scripts/run.sh sync --all --publish
 ```
 
-This regenerates all articles including the new stubs, replacing them with full content.
+---
 
-## Editing the outline file
+## Reference
 
-When editing `.agency-kb/outline.json`, follow these rules:
+### CLI commands
 
-- **Paths**: Use lowercase slug paths with no `.md` suffix and 2-3 segments total (`integrations/slack`, `admin/security/sso`; not `Integrations/Slack` or `integrations/slack.md`)
-- **Globs**: Be specific. Prefer `src/features/auth/**/*.ts` over `**/*auth*`
-- **Topics**: 3-8 bullet points per article. Focus on user-facing behavior, not implementation
-- **Titles**: Use natural language, like a help article ("Task management", not "Tasks CRUD")
-- Always preserve `product_name` and `product_summary` at the top level
-- Keep the JSON valid and well-formatted (2-space indent)
+| Command | What it does |
+|---------|-------------|
+| `agency-kb init` | Validate config and outline, preview bootstrap artifacts |
+| `agency-kb init --publish` | Publish initial docs to an empty collection |
+| `agency-kb sync` | Export, analyze, generate locally (`--path-prefix`, `--all`, `--diff-base`) |
+| `agency-kb sync --publish` | Generate and upload to Agency |
+| `agency-kb review` | Scan for uncovered files, write `review/gaps.json` |
+| `agency-kb review --publish` | Create stub articles from proposals in `review/` |
+| `agency-kb validate-outline` | Check `outline.json` syntax |
 
-When revising an existing outline:
-- Prefer editing the existing article set over regenerating everything from scratch
-- Preserve stable paths unless the user explicitly wants to rename or regroup them
-- If you rename a path, call it out clearly because it changes the document identity in the KB
-- Do not imply that editing the outline alone will change a non-empty collection. After bootstrap, `sync` is driven by the existing docs in Agency.
+### Running the CLI
 
-## Environment variables
-
-- `AGENCY_API_KEY` — required for `sync`
-- `ANTHROPIC_API_KEY` — required for `sync` (LLM content generation)
-
-## For CI (GitHub Actions)
-
-After the initial setup, the `sync` command handles incremental updates:
-
-```yaml
-- name: Update knowledge base
-  env:
-    AGENCY_API_KEY: ${{ secrets.AGENCY_API_KEY }}
-    ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
-  run: |
-    pip install agency-kb
-    agency-kb sync --publish --diff-base=origin/main
+```bash
+sh ${CLAUDE_SKILL_DIR}/scripts/run.sh <command>
 ```
+
+Auto-installs on first use. Reads API keys from `.agency-kb/.env`.
+
+### Editing an existing outline
+
+- Prefer editing existing articles over regenerating from scratch
+- Preserve stable paths — renaming changes the document identity
+- After init, `sync` is driven by the collection in Agency, not the local outline
